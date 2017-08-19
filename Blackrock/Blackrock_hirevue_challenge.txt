@@ -1,0 +1,217 @@
+
+
+
+
+import java.io.*;
+import java.util.*;
+import java.text.*;
+import java.math.*;
+import java.util.regex.*;
+
+
+class Company_transaction{
+    private String trans_type;
+    private String company_ticker;
+    private float quantity;
+    
+    public Company_transaction(){
+        this.trans_type = null;
+        this.company_ticker = null;
+        this.quantity = 0;
+    }
+    
+    public Company_transaction(String trans_type,String company_ticker, float quantity){
+        this.trans_type = trans_type;
+        this.company_ticker = company_ticker;
+        this.quantity = quantity;
+    }
+    
+    
+    public String getInfo(){
+        return "["+this.trans_type+", "+this.company_ticker+", "+String.format("%.2f",(float)this.quantity)+"]";
+    }
+    
+    
+}
+
+
+class Company_db{
+    private String company_ticker;
+    private String company_name;
+    private float pshare;
+    private float bshare;
+    private float price;
+    
+    public Company_db(){
+        this.company_ticker = null;
+        this.company_name = null;
+        this.pshare = 0;
+        this.bshare = 0;
+        this.price = 0;
+    }
+    
+    public Company_db(String company_ticker,String company_name,float pshare,float bshare,float price){
+        this.company_ticker = company_ticker;
+        this.company_name = company_name;
+        this.pshare = pshare;
+        this.bshare = bshare;
+        this.price = price;
+    }
+    
+    public float getPshares(){
+        return this.pshare;
+    }
+    
+    // public int getBshares(){
+    //     return this.company_bshares;
+    // }
+    
+    public String getTicker(){
+        return this.company_ticker;
+    }
+    
+    public float getPValue(){
+        return this.pshare * this.price;
+    }
+    
+    public float getBValue(){
+        return this.bshare * this.price;
+    }
+    
+    //Calculates the %BNAV
+    public float getBNAVpercent(float BNAV){
+        return (this.getBValue()/BNAV)*100;
+    }
+    
+    //Calculates the quantity required to balance portfolio with benchmark
+    public float getQuantityBuySell(float PNAV,float BNAV){
+        return (this.getBNAVpercent(BNAV)/100) * (PNAV/this.price);
+        
+    }
+    
+    // public String getInfo(float NAV){
+    //     return "["+this.company_ticker+", "+this.company_name+", "+this.quantity+", "+String.format("%.2f",this.price)+", "+String.format("%.2f",this.value)+", "+String.format("%.2f",(this.value/NAV)*100)+"]";
+    // }
+    
+    // public String getPortfolio_Info(){
+    //     return "["+this.company_ticker+", "+this.company_name+", "+this.company_pshares+"]";
+    // }
+    
+    // public String getBenchmark_Info(){
+    //     return "["+this.company_ticker+", "+this.company_name+", "+this.company_bshares+"]";
+    // }
+    
+    //Comparator to sort according to the ticker
+    class Checker implements Comparator<Company_db>{
+        public int compare(Company_db c1, Company_db c2){
+            return c1.company_ticker.compareTo(c2.company_ticker);
+        }
+    }
+    
+}
+
+
+public class Main {
+    
+	public static final String SEPARATOR = "@";
+    public static final String COLON = ":";
+    
+    /*
+     * Complete the function below.
+     *
+ 	 * Note: The questions in this test build upon each other. We recommend you
+	 * copy your solutions to your text editor of choice before proceeding to
+	 * the next question as you will not be able to revisit previous questions.
+	 */
+
+
+    static String generateTransactions(String inputString) {
+        
+         String pcompany = inputString.split(COLON)[0];
+         String bcompany = inputString.split(COLON)[1];
+         
+         String [] company_portfolio = pcompany.split(SEPARATOR);
+         String [] company_benchmark = bcompany.split(SEPARATOR);
+         
+         Company_db c = new Company_db();
+         Company_db [] clist = new Company_db[company_benchmark.length];
+         Company_db.Checker checker = c.new Checker();
+         
+         Company_transaction ct = new Company_transaction();
+         Company_transaction [] ct_list = new Company_transaction[company_portfolio.length];
+
+         String [] temp1,temp2;
+        //  String solution = "";
+         StringBuilder sb = new StringBuilder();
+         
+         for(int i =0;i<clist.length;i++){
+             temp1 = company_portfolio[i].split(",");
+             temp2 = company_benchmark[i].split(",");
+             clist[i] = new Company_db(temp1[0],temp1[1],Float.parseFloat(temp1[2]),Float.parseFloat(temp2[2]),Float.parseFloat(temp2[3]));
+         }
+         
+         Arrays.sort(clist,checker);
+         
+        //  int pshares =0,bshares=0,quantity =0;
+        //  for(int i =0;i<clist.length;i++){
+        //     pshares = clist[i].getPshares();
+        //     bshares = clist[i].getBshares();
+        //     if(pshares>bshares){
+        //         quantity = pshares - bshares;
+        //         ct_list[i] = new Company_transaction("SELL",clist[i].getTicker(),quantity);
+        //     }
+        //     else{
+        //         quantity = bshares - pshares;
+        //         ct_list[i] = new Company_transaction("BUY",clist[i].getTicker(),quantity);
+        //     }
+            
+        //  }
+        
+        float PNAV = 0,BNAV =0,quantity=0,pshares = 0;
+        for(int i =0;i<clist.length;i++){
+            PNAV += clist[i].getPValue();
+            BNAV += clist[i].getBValue();
+        }
+        
+        
+        for(int i=0;i<clist.length;i++){
+            quantity = clist[i].getQuantityBuySell(PNAV,BNAV);
+            pshares = clist[i].getPshares();
+            if(quantity > pshares){
+                ct_list[i] = new Company_transaction("BUY",clist[i].getTicker(),quantity-pshares);
+            }
+            else{
+                ct_list[i] = new Company_transaction("SELL",clist[i].getTicker(),quantity-pshares);
+            }
+        }
+        
+        
+         
+         for(int i =0;i<ct_list.length;i++){
+             
+            sb.append(ct_list[i].getInfo());
+            if(i!=clist.length-1){
+                sb.append(", ");
+            }
+         }
+                
+        
+
+
+        // return solution;
+        return sb.toString();
+    }
+    
+    public static void main(String[] args) throws IOException{
+        Scanner in = new Scanner(System.in);
+        String res;
+        String _input;
+        try {
+            _input = in.nextLine();
+        } catch (Exception e) {
+            _input = null;
+        }
+        res = generateTransactions(_input);
+        System.out.println(res);
+    }
+}
